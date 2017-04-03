@@ -50,7 +50,7 @@ winshift = 200;
 % be identical to the frames stored in the data structure in example.
 
 samples = example{1,1}.samples; 
-test = example{1,1}.frames;
+test = example{1,1}.frames';
 frames = enframe(samples,winlen,winshift);
 % As the image have to be plotted in with the same orientation as in the
 % test data then
@@ -62,7 +62,7 @@ imagesc(frames)
 colormap jet
 title(' Enframe function output')
 subplot(2,1,2)
-imagesc(test')
+imagesc(test)
 colormap jet
 title(' Test frames set')
 
@@ -70,7 +70,7 @@ title(' Test frames set')
 % To check the performance numerically, we will substract the test data
 % from the output and get the total differences between both of them
 
-subs = test' - frames;
+subs = test - frames;
 Enframe_error = sum(sum(subs))
 %% 1.2 Pre-emphasys
 %
@@ -92,7 +92,7 @@ Enframe_error = sum(sum(subs))
 
 a = 0.97;
 preemph = preemp(frames,a);
-test_preem = example{1,1}.preemph;
+test_preem = example{1,1}.preemph';
 
 %% 
 % The comparison is shown in the folowwing figure. 
@@ -102,7 +102,7 @@ imagesc(preemph)
 colormap jet
 title(' Preemp function output')
 subplot(2,1,2)
-imagesc(test_preem')
+imagesc(test_preem)
 colormap jet
 title(' Test preemphashis set')
 
@@ -110,5 +110,208 @@ title(' Test preemphashis set')
 % To check the performance numerically, we will substract the test data
 % from the output and get the total differences between both of them
 
-subs = test_preem' - preemph;
+subs = test_preem - preemph;
 Preemphasis_error = sum(sum(subs))
+
+%% 1.3 Hamming window
+%
+% The use of the Hamming window is justified as it emphasizes the center of
+% the window, improving this way the values of the Fourier Transfer
+% Function. The sidelobes are reduced, being the center lobe much important
+% than these side lobes. 
+%
+% The Hamming window is used in order to reduce the discontinuities in the
+% edges of the frames, focusing in the main(centered) frequencies. 
+%
+% The function windowing that applies the hamming window is implemented and
+% used on the pre emphasized frames. 
+
+[windowed_frames, window] = windowing(preemph);
+test_windowed = example{1,1}.windowed';
+%%
+% The shape of the Hamming window used is
+% figure;
+% <<FIGURE_WINDOW.BMP>>
+
+%%
+% We have now to check the performance of the written function. To do so,
+% we have to compare the output of this function with the test data.
+figure;
+subplot(2,1,1)
+imagesc(windowed_frames)
+colormap jet
+title(' Windowing function output')
+subplot(2,1,2)
+imagesc(test_windowed)
+colormap jet
+title(' Test windowing set')
+
+%%
+% To check the performance numerically, we will substract the test data
+% from the output and get the total differences between both of them
+
+subs = test_windowed - windowed_frames;
+window_error = sum(sum(subs))
+
+%%
+% We can observe that the error is not exactly cero but is sufficiently
+% small enough. The insignificant difference is probably due to the use of
+% Matlab instead of Python. 
+
+%% 1.4 Fast Fourier Transform
+%
+% The powerSpectrum function is developed in this section. This function
+% performs the Fast fourier Transform to the windowed frames and a then
+% applies a squared power to the modulus. 
+%
+% As now er are in the frequency domain, it is interesting what the max
+% frequency will be: 
+%
+% $$f_{max}=\frac{f_{samp}}{2}=\frac{20000}{2} = 10 kHz$$
+nfft = 512;
+FFT_frame = powerSpectrum(windowed_frames,nfft);
+test_FFT = example{1,1}.spec';
+
+%%
+% We have now to check the performance of the written function. To do so,
+% we have to compare the output of this function with the test data.
+figure;
+subplot(2,1,1)
+imagesc(FFT_frame)
+title(' Power Spectrum output')
+subplot(2,1,2)
+imagesc(test_FFT)
+title(' Test Power Spectrum set')
+
+%%
+% To check the performance numerically, we will substract the test data
+% from the output and get the total differences between both of them
+
+subs = test_FFT - FFT_frame;
+FFT_error = sum(sum(subs))
+figure
+%%
+% As expected, the error is not 0 as we get the errors from the previous
+% step, but squared. Still the error is too small to be considered.
+
+%% 1.5 Mel filterbank log spectrum
+%
+% A filter bank is a set a filters. In the case of the Mel fiterbank, these
+% filters are triangles, in which the first filter only keeps low
+% frequencies while the next filters slowly shift to higher frequencies and
+% the amplitude of the triangles decrease, and they get wider. 
+%
+% This decreased amplitude try to represent the human ear system, as the
+% higher the frequencies, the more difficult discern differences. This is
+% why the triangles get wider: we need a bigger filter as the resolution is
+% less precise.
+%
+% The sum of the energy in every filter is computed. We need to take the
+% log of this energy due to the log property of sound: to double the sound
+% we need 8 times more energy. 
+
+sampling_freq = 20000;
+[melSpec_frames, filterBank] = logMelSpectrum(FFT_frame,sampling_freq);
+test_melSpec = example{1,1}.mspec';
+
+%%
+% The Mel filter bank computed is the one that follows
+figure('Name','Mel Frequency Filter Bank')
+plot(filterBank')
+axis([0, 178,  0, max(max(filterBank))])
+title('Mel-filterbank')
+%%
+% We have now to check the performance of the written function. To do so,
+% we have to compare the output of this function with the test data.
+figure;
+subplot(2,1,1)
+imagesc(melSpec_frames)
+title(' Power Spectrum output')
+colormap jet
+subplot(2,1,2)
+imagesc(test_melSpec)
+title(' Test Power Spectrum set')
+colormap jet
+
+%%
+% To check the performance numerically, we will substract the test data
+% from the output and get the total differences between both of them
+subs = test_melSpec - melSpec_frames;
+melSpec_error = sum(sum(subs))
+
+%% 1.6 Cosine Transform
+%
+% The Discrete Cosine Transform perform a similar operation than the
+% Fourier transform: they both descompose a discrete-time vector in a sum
+% of scaled-and-shifted basis functions. The main difference is that the
+% DCT uses only cosines as the Basis function. 
+
+number_of_coefficients = 13;
+[CT_frames] = cepstrum(melSpec_frames, number_of_coefficients);
+test_CT = example{1,1}.mfcc';
+
+%%
+% We have now to check the performance of the written function. To do so,
+% we have to compare the output of this function with the test data.
+figure;
+subplot(2,1,1)
+imagesc(CT_frames)
+title(' Cosine transformation output')
+colormap jet
+subplot(2,1,2)
+imagesc(test_CT)
+title(' Test Cosine transformation set')
+colormap jet
+
+%%
+% To check the performance numerically, we will substract the test data
+% from the output and get the total differences between both of them
+subs = test_CT - CT_frames;
+CT_error = sum(sum(subs))
+
+%% 1.7 Liftering
+%
+% The Discrete Cosine Transform perform a similar operation than the
+% Fourier transform: they both descompose a discrete-time vector in a sum
+% of scaled-and-shifted basis functions. The main difference is that the
+% DCT uses only cosines as the Basis function. 
+[Lift_frames] = lifter_matlab(CT_frames);
+test_Lifter = example{1,1}.lmfcc';
+%%
+% We have now to check the performance of the written function. To do so,
+% we have to compare the output of this function with the test data.
+figure;
+subplot(2,1,1)
+imagesc(Lift_frames)
+title(' Cosine transformation output')
+colormap jet
+subplot(2,1,2)
+imagesc(test_Lifter)
+title(' Test Cosine transformation set')
+colormap jet
+
+%%
+% To check the performance numerically, we will substract the test data
+% from the output and get the total differences between both of them
+subs = test_Lifter - Lift_frames;
+Lift_error = sum(sum(subs))
+
+%% 1.8 Calculation of the MFCCs for each uterance
+gender = []
+speaker = []
+MFCCs = cell(1,44)
+% #tidiMfcc = tools.mfcc(tidigits[0]['samples']) 
+% #for i in range(1, len(tidigits)):
+% #    tidiMfcc = np.append(tidiMfcc, tools.mfcc(tidigits[i]['samples']), axis=0 )
+% #
+for i = 1:size(tidigits,2)
+    figure
+    MFCCs{i} = mfcc(tidigits{1,i}.samples)
+    digits(i) = tidigits{1,i}.digit;
+    gender = [gender tidigits{1,i}.gender(1)];
+    speaker = [speaker; tidigits{1,i}.speaker];
+%     subplot(2,1,1)
+     imagesc(MFCCs{i});
+%     subplot(2,1,2)
+%     imagesc(tidigits{1,i}.mfcc');
+end
