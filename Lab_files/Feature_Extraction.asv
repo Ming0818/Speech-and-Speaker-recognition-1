@@ -347,8 +347,9 @@ end
 
 %% Plotting and axplantation
 figure(1);
-imagesc(flipdim(D,1))
-colormap jet
+imagesc(D)
+% colormap default(1000))
+colormap(jet(60))
 xticks(1:44)
 xticklabels(digits)
 yticks(1:44)
@@ -358,4 +359,6 @@ print('Distances','-dpng');
 Clusters = linkage(D,'complete');
 [H,T,outperm] = dendrogram(Clusters, 0);
 % labelss = digits(outperm)
-xticklabels(digits(outperm,:))
+labels = tidigit2labels(tidigits);
+xticklabels(labels(outperm,:))
+set(gca,'XTickLabelRotation',)

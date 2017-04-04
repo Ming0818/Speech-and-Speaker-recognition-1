@@ -359,4 +359,6 @@ print('Distances','-dpng');
 Clusters = linkage(D,'complete');
 [H,T,outperm] = dendrogram(Clusters, 0);
 % labelss = digits(outperm)
-xticklabels(digits(outperm,:))
+labels = tidigit2labels(tidigits);
+xticklabels(labels(outperm,:))
+set(gca,'XTickLabelRotation',90)
