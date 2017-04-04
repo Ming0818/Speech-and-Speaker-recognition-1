@@ -1,4 +1,4 @@
-function output = mfcc(samples)
+function [output,mspec] = mfcc(samples)
 
     % Args:
     %     samples: array of speech samples with shape (N,)

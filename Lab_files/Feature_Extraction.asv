@@ -297,17 +297,65 @@ subs = test_Lifter - Lift_frames;
 Lift_error = sum(sum(subs))
 
 %% 1.8 Calculation of the MFCCs for each uterance
-gender = []
-speaker = []
-MFCCs = []
+gender = [];
+speaker = [];
+digits = [];
+MFCCs = cell(1,44);
+mSpec = cell(1,44);
+MFCCs_straight = cell(1,44);
+mSpec_straight = cell(1,44);
+MFCCs_concatenate = [];
+mSpec_concatenate = [];
 for i = 1:size(tidigits,2)
-%     figure
-    MFCCs = [MFCCs; mfcc(tidigits{1,i}.samples)];
-    digits(i) = tidigits{1,i}.digit;
+    [MFCCs_straight{i} mSpec_straight{i}] = mfcc(tidigits{1,i}.samples);
+    MFCCs{i} = MFCCs_straight{i}';
+    MFCCs_concatenate = vertcat(MFCCs_concatenate,MFCCs{i});
+    mSpec{i} = mSpec_straight{i}';
+    mSpec_concatenate = vertcat(mSpec_concatenate,mSpec{i});
+    digits =[digits; tidigits{1,i}.digit,tidigits{1,i}.gender(1)];
     gender = [gender tidigits{1,i}.gender(1)];
     speaker = [speaker; tidigits{1,i}.speaker];
-%     subplot(2,1,1)
-%     imagesc(MFCCs);
-%     subplot(2,1,2)
-%     imagesc(tidigits{1,i}.mfcc');
 end
+
+%% 2. Study the correlation between uterances
+figure
+corMFCCs = corrcoef(MFCCs_concatenate);
+imagesc(flipdim(corMFCCs ,1));           %# vertical flip)
+axis equal
+colormap winter
+colorbar
+
+figure
+corMspec = corrcoef(mSpec_concatenate);
+imagesc(flipdim(corMspec ,1));           %# vertical flip)
+axis equal
+colormap winter
+colorbar
+
+%% 3. Distances
+%
+% 
+D = zeros(size(tidigits,2),size(tidigits,2));
+for i = 1:size(tidigits,2)
+    for j =  1:size(tidigits,2)
+        a = MFCCs{i};
+        b = MFCCs{j};
+        local_dist = localDistances(a, b);
+        D(i,j) = dtw(local_dist);
+    end
+end
+
+%% Plotting and axplantation
+figure(1);
+imagesc(flipdim(D,1))
+colormap jet
+xticks(1:44)
+xticklabels(digits)
+yticks(1:44)
+yticklabels(digits)
+print('Distances','-dpng');
+%% Linkage clustering
+Clusters = linkage(D,'complete');
+[H,T,outperm] = dendrogram(Clusters, 0);
+% labelss = digits(outperm)
+xticklabels(digits(outperm,:))

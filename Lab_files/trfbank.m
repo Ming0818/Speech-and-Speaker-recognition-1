@@ -17,7 +17,7 @@ function fbank = trfbank(fs, nfft)
     %Variables
     format long;
     lowfreq = 133.33;
-    linsc = 200/3.
+    linsc = 200/3.;
     logsc = 1.0711703;
     nlinfilt = 13; 
     nlogfilt = 27; 
