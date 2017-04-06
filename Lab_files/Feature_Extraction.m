@@ -166,7 +166,7 @@ window_error = sum(sum(subs))
 %
 % The powerSpectrum function is developed in this section. This function
 % performs the Fast fourier Transform to the windowed frames and a then
-% applies a squared power to the modulus. 
+% applies a squared power to the modulus. The FFT samples length is 512.
 %
 % As now er are in the frequency domain, it is interesting what the max
 % frequency will be: 
@@ -193,7 +193,7 @@ title(' Test Power Spectrum set')
 
 subs = test_FFT - FFT_frame;
 FFT_error = sum(sum(subs))
-figure
+
 %%
 % As expected, the error is not 0 as we get the errors from the previous
 % step, but squared. Still the error is too small to be considered.
@@ -213,6 +213,9 @@ figure
 % The sum of the energy in every filter is computed. We need to take the
 % log of this energy due to the log property of sound: to double the sound
 % we need 8 times more energy. 
+% 
+% In this case the number of filters in the bank is 40: 13 linear filters
+% and 27 logaritmic.
 
 sampling_freq = 20000;
 [melSpec_frames, filterBank] = logMelSpectrum(FFT_frame,sampling_freq);
@@ -248,7 +251,8 @@ melSpec_error = sum(sum(subs))
 % The Discrete Cosine Transform perform a similar operation than the
 % Fourier transform: they both descompose a discrete-time vector in a sum
 % of scaled-and-shifted basis functions. The main difference is that the
-% DCT uses only cosines as the Basis function. 
+% DCT uses only cosines as the Basis function. We get then, for each
+% window, 13 coefficients or cepstrums. 
 
 number_of_coefficients = 13;
 [CT_frames] = cepstrum(melSpec_frames, number_of_coefficients);
@@ -275,10 +279,12 @@ CT_error = sum(sum(subs))
 
 %% 1.7 Liftering
 %
-% The Discrete Cosine Transform perform a similar operation than the
-% Fourier transform: they both descompose a discrete-time vector in a sum
-% of scaled-and-shifted basis functions. The main difference is that the
-% DCT uses only cosines as the Basis function. 
+% Fhis is the last step, which output are the final MFCCs for the current utterance.
+% A lifter is a filter that operates on a cepstrum might be called a lifter. A low-pass lifter 
+% is similar to a low-pass filter in the frequency domain. This is done to
+% even clean the signal more leaving only the important and different
+% information. 
+
 [Lift_frames] = lifter_matlab(CT_frames);
 test_Lifter = example{1,1}.lmfcc';
 %%
@@ -287,11 +293,11 @@ test_Lifter = example{1,1}.lmfcc';
 figure;
 subplot(2,1,1)
 imagesc(Lift_frames)
-title(' Cosine transformation output')
+title(' Lifter output')
 colormap jet
 subplot(2,1,2)
 imagesc(test_Lifter)
-title(' Test Cosine transformation set')
+title(' Test Lifter set')
 colormap jet
 
 %%
@@ -300,7 +306,43 @@ colormap jet
 subs = test_Lifter - Lift_frames;
 Lift_error = sum(sum(subs))
 
+%%
+%
+% All the steps together in order can be represented by the following
+% figure: 
+
+figure
+plot(samples)
+figure
+imagesc(frames);
+colormap(jet)
+figure
+imagesc(preemph)
+colormap(jet)
+figure
+imagesc(windowed_frames)
+colormap(jet)
+figure
+imagesc(FFT_frame)
+colormap default
+figure
+imagesc(melSpec_frames)
+colormap(jet)
+figure
+imagesc(CT_frames)
+colormap(jet)
+figure
+imagesc(Lift_frames)
+colormap(jet)
 %% 1.8 Calculation of the MFCCs for each uterance
+%
+% For the further analisys of the data set, all the utterance are going to
+% be transformed to the MFCCs space. Also, the output of each uterance will
+% be concatenated in an unique matrix of features in order to be able to
+% represent and gather all the features included in the data set. This
+% matrix has dimensions of NxM being N the total number of frames in the
+% data set and M the number of coefficients (13).
+
 gender = [];
 speaker = [];
 digits = [];
@@ -322,12 +364,20 @@ for i = 1:size(tidigits,2)
 end
 
 %% 2. Study the correlation between uterances
+%
+% To study the correlation between the 13 coefficients, the correlation
+% matrix of the entire feature matrix is calculated using the MFCCs
+% coefficients. 
 figure
 corMFCCs = corrcoef(MFCCs_concatenate);
 imagesc(flipdim(corMFCCs ,1));           %# vertical flip)
 axis equal
 colormap winter
 colorbar
+
+%% 
+%
+% And the Mel filterbank features
 
 figure
 corMspec = corrcoef(mSpec_concatenate);
@@ -336,6 +386,15 @@ axis equal
 colormap winter
 colorbar
 
+
+%%
+%
+% By comparing both results we can justify the steps that follow the
+% application of the filterbank as all the correlations between
+% coefficients have almost disappeared meaning this that all the
+% coeffiecients are giving unique information. We can accept the diagonal
+% covariance matrices assumption for Gaussian models as the MFCCs
+% coefficients are almost not correlated at all. 
 %% 3. Distances
 %
 

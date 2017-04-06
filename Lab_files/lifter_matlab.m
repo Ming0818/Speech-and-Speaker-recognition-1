@@ -11,12 +11,6 @@ function output = lifter_matlab(mfcc)
     [nframes, nceps] = size(mfcc);
     cepwin = 1.0 + lifter/2.0 * sin(pi * (0:nframes-1) / lifter);
     cepwin = repmat(cepwin,nceps,1);
-%     figure
-%     subplot(3,1,1)
-%     surf(cepwin)
-%     subplot(3,1,2)
-%     surf(mfcc)
+
     output = mfcc.*cepwin';
-%     subplot(3,1,3)
-%     surf(output)
 end
