@@ -3,7 +3,7 @@
 %%
 % Mel Frequency Cepstral Coefficients (MFCCs) are coefficients used in
 % Speech recognition based on human auditive perception. These coefficients
-% come from the need, in the field of aoutonomous audio recognition, to
+% come from the need, in the field of autonomous audio recognition, to
 % extract the main features of an audio signal while discarding all the
 % irrelevant features that will make the recognition harder to achieve
 % (background noise, emotion ...)
@@ -31,8 +31,12 @@ load('example.mat')
 % between windows of 10 ms. As the shift is smaller than the window, the
 % computed frames will have shared parts between each other
 %
-% _*Compute the number of samples per frame and shift*_
+% *Compute the number of samples per frame and shift*
 % 
+% As out signal has been sampled, we dont have a continuos signal but a
+% discrete one. This is why we are interested of knowing the number of
+% samples per window rather than the time. 
+%
 % The sampling rate is S = 20 kHz. Then the period is $T = 1/S$. 
 % We have that: 
 %
@@ -81,9 +85,9 @@ Enframe_error = sum(sum(subs))
 %
 % Being the coefficientes  $A = 1$ and $B = [1 -a]$.
 %
-% The purpose of substracting the main part of the previous input is
-% because the important features are in the higher frequencias, remaining
-% the lower frequencies almost unchenged. Therefor, doing the substraction
+% The purpose of this filter is to filter the lower frequencies, letting pass the higher ones. 
+% This is because the important features are in the higher frequencies, remaining
+% the lower frequencies almost unchanged. Therefore, by doing the filtering
 % we discard the similar parts of the signal analyzing only the higher
 % frequencies, where the important features are. 
 %
@@ -95,7 +99,7 @@ preemph = preemp(frames,a);
 test_preem = example{1,1}.preemph';
 
 %% 
-% The comparison is shown in the folowwing figure. 
+% The comparison is shown in the following figure. 
 figure;
 subplot(2,1,1)
 imagesc(preemph)
@@ -117,7 +121,7 @@ Preemphasis_error = sum(sum(subs))
 %
 % The use of the Hamming window is justified as it emphasizes the center of
 % the window, improving this way the values of the Fourier Transfer
-% Function. The sidelobes are reduced, being the center lobe much important
+% Function. The sidelobes are reduced, being the center lobe much more important
 % than these side lobes. 
 %
 % The Hamming window is used in order to reduce the discontinuities in the
@@ -131,10 +135,10 @@ test_windowed = example{1,1}.windowed';
 %%
 % The shape of the Hamming window used is
 % figure;
-% <<FIGURE_WINDOW.BMP>>
+wvtool(window)
 
 %%
-% We have now to check the performance of the written function. To do so,
+% We now have to check the performance of the written function. To do so,
 % we have to compare the output of this function with the test data.
 figure;
 subplot(2,1,1)
@@ -334,7 +338,7 @@ colorbar
 
 %% 3. Distances
 %
-% 
+
 D = zeros(size(tidigits,2),size(tidigits,2));
 for i = 1:size(tidigits,2)
     for j =  1:size(tidigits,2)
@@ -346,19 +350,47 @@ for i = 1:size(tidigits,2)
 end
 
 %% Plotting and axplantation
-figure(1);
+figure;
 imagesc(D)
 % colormap default(1000))
 colormap(jet(60))
-xticks(1:44)
-xticklabels(digits)
-yticks(1:44)
-yticklabels(digits)
-print('Distances','-dpng');
+colorbar;
+labels = tidigit2labels(tidigits);
+set(gca,'XTick',1:44);
+set(gca,'XTickLabel',labels);
+set(gca,'XTickLabelRotation',90);
+set(gca,'YTick',1:44);
+set(gca,'YTickLabel',labels);
+set(gca,'YTickLabelRotation',0);
 %% Linkage clustering
 Clusters = linkage(D,'complete');
 [H,T,outperm] = dendrogram(Clusters, 0);
-% labelss = digits(outperm)
-labels = tidigit2labels(tidigits);
-xticklabels(labels(outperm,:))
-set(gca,'XTickLabelRotation',90)
+labels = labels(outperm,:);
+set(gca,'XTick',1:44);
+set(gca,'XTickLabel',labels);
+set(gca,'XTickLabelRotation',90);
+
+%% Train
+
+groups = cell(4);
+character = cell(4);
+count = 1; 
+groups_concatenate = [];
+for i = 1:size(tidigits,2)
+    if tidigits{i}.digit == '7'
+        groups{count} = mfcc(tidigits{i}.samples)';
+        groups_concatenate = vertcat(groups_concatenate,groups{count});
+        character{count} = tidigits{i}.digit;
+        count = count + 1;
+    end
+end
+
+D = zeros(size(groups,2),size(groups,2));
+for i = 1:size(groups,2)
+    for j =  1:size(groups,2)
+        a = groups{i};
+        b = groups{j};
+        local_dist = localDistances(a, b);
+        D(i,j) = dtw(local_dist);
+    end
+end
