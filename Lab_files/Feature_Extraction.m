@@ -453,3 +453,69 @@ for i = 1:size(groups,2)
         D(i,j) = dtw(local_dist);
     end
 end
+
+%%
+%
+
+componentsNr = [4 8 16 32];
+% data = MFCCs{1};
+% data = tidigits{1}.samples';
+data_t = groups_concatenate;
+data = MFCCs_concatenate;
+
+size(data)
+
+options = statset('Display','final');
+GMModel = fitgmdist(data_t,componentsNr(1),'Options',options)
+
+% h = ezcontour(@(x,y)pdf(obj,[x y]),[-8 6],[-8 6]);
+P = posterior(GMModel,groups{1});
+size(P)
+
+figure
+subplot(2,1,1)
+imagesc(groups{1}')
+subplot(2,1,2)
+imagesc(P')
+
+%%
+
+componentsNr = [4 8 16 32];
+% data = MFCCs{4};
+% data = tidigits{1}.samples';
+% data = groups_concatenate;
+data = MFCCs_concatenate;
+data_t = groups_concatenate;
+size(data)
+
+options = statset('Display','final');
+GMModel = fitgmdist(data,componentsNr(3),'Options',options)
+
+% h = ezcontour(@(x,y)pdf(obj,[x y]),[-8 6],[-8 6]);
+groups_7 = cell(4);
+character2 = cell(4);
+count = 1; 
+groups_concatenate_7 = [];
+for i = 1:size(tidigits,2)
+    if tidigits{i}.digit == '7'
+        groups_7{count} = mfcc(tidigits{i}.samples)';
+        groups_concatenate_7 = vertcat(groups_concatenate,groups_7{count});
+        character{count} = tidigits{i}.digit;
+        count = count + 1;
+    end
+end
+% groups_concatenate_7
+size(groups_concatenate_7)
+mfcc_rows = size(groups_concatenate_7, 1) /4;
+mfcc_cols = size(groups_concatenate_7, 2) / 1;
+test1 = groups_concatenate_7(1:mfcc_rows, 1:mfcc_cols);
+% P = posterior(GMModel,data_t);
+P = posterior(GMModel,test1);
+% P
+size(P)
+
+figure
+subplot(2,1,1)
+imagesc(test1')
+subplot(2,1,2)
+imagesc(P')
