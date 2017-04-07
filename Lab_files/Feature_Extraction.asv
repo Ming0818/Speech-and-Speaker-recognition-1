@@ -462,8 +462,8 @@ set(gca,'YTickLabelRotation',0);
 %% Linkage clustering
 %
 % Now the objective is to achieve a hierarchical clustering over the
-% Global distance matrix. To do this we use the Linkage Matlab function and
-% compute the dendrogram with the outputed data
+% Global distance matrix. To do this we use the Linkage Matlab function over
+% the distance matrix and compute the dendrogram with the outputed data.
 Clusters = linkage(D,'complete');
 [H,T,outperm] = dendrogram(Clusters, 0);
 labels = labels(outperm,:);
@@ -471,93 +471,96 @@ set(gca,'XTick',1:44);
 set(gca,'XTickLabel',labels);
 set(gca,'XTickLabelRotation',90);
 
-%% Train
+%%
+%
+% We can observe that the the classification of the digits spoken by the
+% same speaker is generally well done, as in the first clustering level,
+% same digits frome the same speaker are in the same cluster, with some
+% exceptions: numbers 9 and 8. Also, in the second clusterin level we can
+% see that some digits appear together for both speakers as for the digits
+% 2 and 3. The last apreciation will be the fact that man and women are
+% separated in big clusters. 
+%% 4. Explore speech segments with Cluster
+%
+% The main objective now is to train a Gaussian Mixture model with the
+% features we substracted from the dataset. To train the network we will
+% use all the features of all the utterance concatenated (as in the
+% Distances sectiomn). Using the Matlab function fitgmdist the GMM will be
+% trained. After is it trained, we use the individual features of two very
+% different digits (2 and 7) to test the performance
 
-groups = cell(4);
-character = cell(4);
-count = 1; 
-groups_concatenate = [];
-for i = 1:size(tidigits,2)
-    if tidigits{i}.digit == '7'
-        groups{count} = mfcc(tidigits{i}.samples)';
-        groups_concatenate = vertcat(groups_concatenate,groups{count});
-        character{count} = tidigits{i}.digit;
-        count = count + 1;
-    end
-end
+%Number of components
+componentsNr = [4 8 16 32];
 
-D = zeros(size(groups,2),size(groups,2));
-for i = 1:size(groups,2)
-    for j =  1:size(groups,2)
-        a = groups{i};
-        b = groups{j};
-        local_dist = localDistances(a, b);
-        D(i,j) = dtw(local_dist);
-    end
+%We iterate to train and test the GMMs for different number of components
+for i = 1:size(componentsNr, 2)
+        groups_word = cell(4);
+        character2 = cell(4);
+        count = 1; 
+        count2 = 1;
+        groups_concatenate_word = [];
+        groups_concatenate_word2 = [];
+        %Prepare test set for digit 7
+        for k = 1:size(tidigits,2)
+            if tidigits{k}.digit == '7' %digits(j) %'7'
+                groups_word{count} = mfcc(tidigits{k}.samples)';
+                groups_concatenate_word = vertcat(groups_concatenate_word,groups_word{count});
+                character{count} = tidigits{k}.digit;
+                count = count + 1;
+            end
+        end
+        %Prepare data set for digit 2
+        for k = 1:size(tidigits,2)
+            if tidigits{k}.digit == '2' %digits(j) %'7'
+                groups_word2{count} = mfcc(tidigits{k}.samples)';
+                groups_concatenate_word2 = vertcat(groups_concatenate_word2,groups_word2{count});
+                character2{count} = tidigits{k}.digit;
+                count2 = count2 + 1;
+            end
+        end
+        size(groups_concatenate_word)
+        data_t = groups_concatenate_word;
+        data_t2 = groups_concatenate_word2;
+        data = MFCCs_concatenate;
+        options = statset('Display','final');
+        
+        %Train the model
+        GMModel = fitgmdist(data,componentsNr(i),'options',options)
+        
+        %Test it
+        P = posterior(GMModel,data_t);
+        
+        %Plot the results
+        figure
+        subplot(2,1,1)
+        imagesc(P')
+        subplot(2,1,2)
+        imagesc(data_t')
+        title(['Posteriors for a GMM model for digit 7 with ', num2str(componentsNr(i)),  ' components'])
+        
+        %Test it
+        P2 = posterior(GMModel,data_t2);
+        
+        %Plot the results
+        figure
+        subplot(2,1,1)
+        imagesc(P2')
+        subplot(2,1,2)
+        imagesc(data_t2')
+        title(['Posteriors for a GMM model with for digit 2 ', num2str(componentsNr(i)),  ' components'])
+        
+        %Comparison
+        figure
+        subplot(2,1,1)
+        imagesc(P')
+        subplot(2,1,2)
+        imagesc(P2')
+        title(['Posteriors for a GMM model comparison for digits 7 and 2 and ', num2str(componentsNr(i)),  ' components'])
 end
 
 %%
 %
-
-% componentsNr = [4 8 16 32];
-% % data = MFCCs{1};
-% % data = tidigits{1}.samples';
-% data_t = groups_concatenate;
-% data = MFCCs_concatenate;
-% 
-% size(data)
-% 
-% options = statset('Display','final');
-% GMModel = fitgmdist(data_t,componentsNr(1),'Options',options)
-% 
-% % h = ezcontour(@(x,y)pdf(obj,[x y]),[-8 6],[-8 6]);
-% P = posterior(GMModel,groups{1});
-% size(P)
-% 
-% figure
-% subplot(2,1,1)
-% imagesc(groups{1}')
-% subplot(2,1,2)
-% imagesc(P')
-% 
-% %%
-% 
-% componentsNr = [4 8 16 32];
-% % data = MFCCs{4};
-% % data = tidigits{1}.samples';
-% % data = groups_concatenate;
-% data = MFCCs_concatenate;
-% data_t = groups_concatenate;
-% size(data)
-% 
-% options = statset('Display','final');
-% GMModel = fitgmdist(data,componentsNr(3),'Options',options)
-% 
-% % h = ezcontour(@(x,y)pdf(obj,[x y]),[-8 6],[-8 6]);
-% groups_7 = cell(4);
-% character2 = cell(4);
-% count = 1; 
-% groups_concatenate_7 = [];
-% for i = 1:size(tidigits,2)
-%     if tidigits{i}.digit == '7'
-%         groups_7{count} = mfcc(tidigits{i}.samples)';
-%         groups_concatenate_7 = vertcat(groups_concatenate,groups_7{count});
-%         character{count} = tidigits{i}.digit;
-%         count = count + 1;
-%     end
-% end
-% % groups_concatenate_7
-% size(groups_concatenate_7)
-% mfcc_rows = size(groups_concatenate_7, 1) /4;
-% mfcc_cols = size(groups_concatenate_7, 2) / 1;
-% test1 = groups_concatenate_7(1:mfcc_rows, 1:mfcc_cols);
-% % P = posterior(GMModel,data_t);
-% P = posterior(GMModel,test1);
-% % P
-% size(P)
-% 
-% figure
-% subplot(2,1,1)
-% imagesc(test1')
-% subplot(2,1,2)
-% imagesc(P')
+% We can see how the GMM performance the estimation of the posterior. THe
+% most important figures are the ones that compare the posterior for the
+% different digits as we can see that they are really similar if the are
+% from the same number but very different across nu
