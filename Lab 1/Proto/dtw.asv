@@ -1,0 +1,24 @@
+function output = dtw(localdist)
+
+    % Args:
+    %   localdist: array NxM of local distances computed between two sequences
+    %            of length N and M respectively
+    % Output:
+    %   globaldist: scalar, global distance computed by Dynamic Time Warping
+    
+    [N, M] = size(localdist);
+    Accumulator = zeros(size(localdist);
+    Accumulator(1,1) = localdist(1,1)
+    for i=2:N
+        off = localdist(i,1);
+        accumulator(i,0)0] = acc[i-1][0] + off
+    for j in range(1, M):
+        off = localdist[0][j]
+        acc[0][j] = acc[0][j-1] + off
+
+    for i in range(1, N):
+        for j in range(1, M):
+            off = localdist[i][j]
+            acc[i][j] = min( acc[i-1][j], acc[i-1][j-1], acc[i][j-1]  ) + off
+
+    return acc[N-1][M-1]
