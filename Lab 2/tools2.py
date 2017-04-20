@@ -1,5 +1,20 @@
 import numpy as np
 
+def tidigit2labels(tidigitsarray):
+    """
+    Return a list of labels including gender, speaker, digit and repetition information for each
+    utterance in tidigitsarray. Useful for plots.
+    """
+    labels = []
+    nex = len(tidigitsarray)
+    for ex in range(nex):
+        labels.append(tidigitsarray[ex]['gender'] + '_' + 
+                      tidigitsarray[ex]['speaker'] + '_' + 
+                      tidigitsarray[ex]['digit'] + '_' + 
+                      tidigitsarray[ex]['repetition'])
+    return labels
+
+
 def logsumexp(arr, axis=0):
     """Computes the sum of arr assuming arr is in the log domain.
     Returns log(sum(exp(arr))) while minimizing the possibility of
